@@ -1,14 +1,14 @@
 import allure
 import requests
 from data.endpoints import Endpoints
-from config.settings import Config
+from config.settings import ApiConfig
 
 
 class APIClient:
     """Клиент для работы с API."""
     
     def __init__(self):
-        self.timeout = Config.REQUEST_TIMEOUT
+        self.timeout = ApiConfig.REQUEST_TIMEOUT
     
     @allure.step("POST запрос на регистрацию пользователя")
     def create_user(self, payload):

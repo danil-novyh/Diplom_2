@@ -2,6 +2,7 @@ import allure
 import pytest
 from data.response_codes import StatusCode
 from data.messages import ErrorMessages
+from helpers.user_helpers import UserHelpers
 
 
 @allure.epic("User Management")
@@ -12,11 +13,10 @@ class TestUserCreation:
     @allure.title("Успешное создание уникального пользователя")
     @allure.description("Проверка, что уникальный пользователь успешно создается с кодом 200")
     @allure.severity(allure.severity_level.CRITICAL)
-    def test_create_unique_user_success(self, api_client, user_payload):
+    def test_create_unique_user_success(self, registered_user_with_cleanup):
         """Тест создания уникального пользователя."""
         
-        with allure.step("Отправка POST запроса на создание пользователя"):
-            response = api_client.create_user(user_payload)
+        response, user_payload, access_token = registered_user_with_cleanup
         
         with allure.step("Проверка кода ответа 200"):
             assert response.status_code == StatusCode.OK
@@ -36,11 +36,6 @@ class TestUserCreation:
         with allure.step("Проверка корректности name в ответе"):
             assert response.json()["user"]["name"] == user_payload["name"]
         
-        # Удаляем созданного пользователя
-        with allure.step("Очистка: удаление созданного пользователя"):
-            access_token = response.json()["accessToken"]
-            delete_response = api_client.delete_user(access_token)
-            assert delete_response.status_code == StatusCode.ACCEPTED
     
     @allure.title("Создание пользователя с существующим email")
     @allure.description("Проверка, что нельзя создать пользователя с уже существующим email")
@@ -67,13 +62,7 @@ class TestUserCreation:
     @allure.severity(allure.severity_level.NORMAL)
     def test_create_user_without_email_fails(self, api_client, data_generator):
         """Тест создания пользователя без email."""
-        
-        with allure.step("Генерация данных пользователя без email"):
-            user_payload = data_generator.generate_user_data(
-                include_email=False,
-                include_password=True,
-                include_name=True
-            )
+        user_payload = UserHelpers.prepare_user_payload_without_email(data_generator)
         
         with allure.step("Отправка POST запроса на создание пользователя без email"):
             response = api_client.create_user(user_payload)
@@ -86,6 +75,9 @@ class TestUserCreation:
         
         with allure.step(f"Проверка сообщения об ошибке: '{ErrorMessages.MISSING_REQUIRED_FIELDS}'"):
             assert response.json()["message"] == ErrorMessages.MISSING_REQUIRED_FIELDS
+        # Включил постусловие
+        with allure.step("Post-condition: безопасная очистка"):
+            UserHelpers.cleanup_after_failed_registration(api_client, user_payload)
     
     @allure.title("Создание пользователя без password")
     @allure.description("Проверка, что нельзя создать пользователя без обязательного поля password")
@@ -93,12 +85,7 @@ class TestUserCreation:
     def test_create_user_without_password_fails(self, api_client, data_generator):
         """Тест создания пользователя без password."""
         
-        with allure.step("Генерация данных пользователя без password"):
-            user_payload = data_generator.generate_user_data(
-                include_email=True,
-                include_password=False,
-                include_name=True
-            )
+        user_payload = UserHelpers.prepare_user_payload_without_password(data_generator)
         
         with allure.step("Отправка POST запроса на создание пользователя без password"):
             response = api_client.create_user(user_payload)
@@ -111,6 +98,9 @@ class TestUserCreation:
         
         with allure.step(f"Проверка сообщения об ошибке: '{ErrorMessages.MISSING_REQUIRED_FIELDS}'"):
             assert response.json()["message"] == ErrorMessages.MISSING_REQUIRED_FIELDS
+        # Включил постусловие
+        with allure.step("Post-condition: безопасная очистка"):
+            UserHelpers.cleanup_after_failed_registration(api_client, user_payload)
     
     @allure.title("Создание пользователя без name")
     @allure.description("Проверка, что нельзя создать пользователя без обязательного поля name")
@@ -118,12 +108,7 @@ class TestUserCreation:
     def test_create_user_without_name_fails(self, api_client, data_generator):
         """Тест создания пользователя без name."""
         
-        with allure.step("Генерация данных пользователя без name"):
-            user_payload = data_generator.generate_user_data(
-                include_email=True,
-                include_password=True,
-                include_name=False
-            )
+        user_payload = UserHelpers.prepare_user_payload_without_name(data_generator)
         
         with allure.step("Отправка POST запроса на создание пользователя без name"):
             response = api_client.create_user(user_payload)
@@ -136,3 +121,7 @@ class TestUserCreation:
         
         with allure.step(f"Проверка сообщения об ошибке: '{ErrorMessages.MISSING_REQUIRED_FIELDS}'"):
             assert response.json()["message"] == ErrorMessages.MISSING_REQUIRED_FIELDS
+
+        with allure.step("Post-condition: безопасная очистка"):
+            UserHelpers.cleanup_after_failed_registration(api_client, user_payload)
+            

@@ -2,6 +2,7 @@ import pytest
 import allure
 from helpers.api_client import APIClient
 from helpers.data_generator import DataGenerator
+from helpers.user_helpers import UserHelpers
 
 
 @pytest.fixture(scope="session")
@@ -17,17 +18,7 @@ def data_generator():
 
 
 @pytest.fixture(scope="function")
-def user_payload(data_generator):
-    """
-    Фикстура для генерации данных пользователя.
-    
-    Возвращает динамически сгенерированные данные для нового пользователя.
-    """
-    return data_generator.generate_user_data()
-
-
-@pytest.fixture(scope="function")
-def created_user(api_client, user_payload):
+def created_user(api_client, data_generator):
     """
     Фикстура для создания пользователя с автоматическим удалением.
     
@@ -37,6 +28,8 @@ def created_user(api_client, user_payload):
     Yields:
         tuple: (user_payload, access_token)
     """
+    access_token = None
+    user_payload = UserHelpers.prepare_user_payload(data_generator)
     with allure.step("Setup: Создание тестового пользователя"):
         response = api_client.create_user(user_payload)
         access_token = response.json().get("accessToken")
@@ -46,12 +39,11 @@ def created_user(api_client, user_payload):
     
     # Teardown: удаление пользователя
     with allure.step("Teardown: Удаление тестового пользователя"):
-        if access_token:
-            api_client.delete_user(access_token)
+        UserHelpers.cleanup_user(api_client, access_token)
 
 
 @pytest.fixture(scope="function")
-def created_user_with_login(api_client, user_payload):
+def created_user_with_login(api_client, data_generator):
     """
     Фикстура для создания и логина пользователя.
     
@@ -61,23 +53,24 @@ def created_user_with_login(api_client, user_payload):
     Yields:
         tuple: (user_payload, access_token)
     """
+    access_token = None
+    user_payload = UserHelpers.prepare_user_payload(data_generator)
     with allure.step("Setup: Создание и логин тестового пользователя"):
         # Создание пользователя
-        create_response = api_client.create_user(user_payload)
+        api_client.create_user(user_payload)
         
         # Логин для получения свежего токена
-        login_payload = {
-            "email": user_payload["email"],
-            "password": user_payload["password"]
-        }
+        login_payload = UserHelpers.prepare_login_payload(
+            user_payload["email"],
+            user_payload["password"]
+        )
         login_response = api_client.login_user(login_payload)
         access_token = login_response.json().get("accessToken")
     
     yield user_payload, access_token
     
     with allure.step("Teardown: Удаление тестового пользователя"):
-        if access_token:
-            api_client.delete_user(access_token)
+        UserHelpers.cleanup_user(api_client, access_token)
 
 
 @pytest.fixture(scope="session")
@@ -99,23 +92,23 @@ def ingredient_ids(api_client):
 
 
 @pytest.fixture(scope="function")
-def valid_order_ingredients(ingredient_ids):
+def registered_user_with_cleanup(api_client, data_generator):
     """
-    Фикстура для получения валидных ингредиентов для заказа.
+    Фикстура для тестов, проверяющих ответ от регистрации.
+    Создаёт пользователя, возвращает response, гарантирует удаление.
+    Сложная логика setup/teardown — остаётся в conftest.
+    Yields:
+        tuple: (response, user_payload, access_token)
+    """
+    access_token = None
+    user_payload = UserHelpers.prepare_user_payload(data_generator)
     
-    Returns:
-        list: Список из 2-3 валидных ID ингредиентов
-    """
-    # Берем первые 3 ингредиента
-    return ingredient_ids[:3]
-
-
-@pytest.fixture(scope="function")
-def invalid_order_ingredients():
-    """
-    Фикстура для невалидных ID ингредиентов.
+    with allure.step("Setup: Регистрация пользователя для теста"):
+        response = api_client.create_user(user_payload)
+        access_token = response.json().get("accessToken")
     
-    Returns:
-        list: Список невалидных ID
-    """
-    return ["invalid_hash_123", "wrong_id_456"]
+    yield response, user_payload, access_token
+    
+    with allure.step("Teardown: Удаление пользователя после теста"):
+        UserHelpers.cleanup_user(api_client, access_token)
+        

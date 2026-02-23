@@ -1,6 +1,7 @@
 import allure
 from data.response_codes import StatusCode
 from data.messages import ErrorMessages
+from helpers.user_helpers import UserHelpers
 
 
 @allure.epic("User Management")
@@ -17,10 +18,10 @@ class TestUserLogin:
         user_payload, _ = created_user
         
         with allure.step("Подготовка данных для логина"):
-            login_payload = {
-                "email": user_payload["email"],
-                "password": user_payload["password"]
-            }
+            login_payload = UserHelpers.prepare_login_payload(
+                user_payload["email"],
+                user_payload["password"]
+            )
         
         with allure.step("Отправка POST запроса на логин"):
             response = api_client.login_user(login_payload)

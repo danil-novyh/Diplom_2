@@ -1,13 +1,13 @@
 import allure
 from faker import Faker
-from config.settings import Config
+from config.settings import GeneratorConfig
 
 
 class DataGenerator:
     """Класс для генерации тестовых данных."""
     
     def __init__(self):
-        self.faker = Faker(Config.FAKER_LOCALE)
+        self.faker = Faker(GeneratorConfig.FAKER_LOCALE)
     
     @allure.step("Генерация данных для нового пользователя")
     def generate_user_data(self, include_email=True, include_password=True, include_name=True):

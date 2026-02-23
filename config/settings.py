@@ -1,9 +1,10 @@
-class Config:
-    """Основные настройки проекта."""
+class ApiConfig:
+    """Настройки подключения к API."""
     BASE_URL = "https://stellarburgers.education-services.ru/api"
-    REQUEST_TIMEOUT = 10  # секунды
-    # Faker locale
+    REQUEST_TIMEOUT = 10
+
+
+class GeneratorConfig:
+    """Настройки генерации тестовых данных."""
     FAKER_LOCALE = "ru_RU"
-    # Длина генерируемых строк
     DEFAULT_STRING_LENGTH = 10
-    
