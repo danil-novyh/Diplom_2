@@ -1,0 +1,17 @@
+pytest==9.0.2
+pytest-cov==7.0.0
+requests==2.32.5
+types-requests==2.32.0.20241016
+
+allure-pytest==2.15.0
+allure-python-commons==2.15.0
+
+Faker==38.2.0
+
+python-dotenv==1.0.1
+
+colorama==0.4.6
+idna==3.11
+iniconfig==2.3.0
+packaging==25.0
+pluggy==1.6.0
