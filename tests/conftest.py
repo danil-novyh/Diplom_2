@@ -92,23 +92,30 @@ def ingredient_ids(api_client):
 
 
 @pytest.fixture(scope="function")
-def registered_user_with_cleanup(api_client, data_generator):
-    """
-    Фикстура для тестов, проверяющих ответ от регистрации.
-    Создаёт пользователя, возвращает response, гарантирует удаление.
-    Сложная логика setup/teardown — остаётся в conftest.
-    Yields:
-        tuple: (response, user_payload, access_token)
-    """
-    access_token = None
-    user_payload = UserHelpers.prepare_user_payload(data_generator)
+def cleanup_user_token(api_client):
+    """ 
+    Фикстура для очистки пользователя по токену.
     
-    with allure.step("Setup: Регистрация пользователя для теста"):
-        response = api_client.create_user(user_payload)
-        access_token = response.json().get("accessToken")
+    Используется в тестах, где регистрация — ЧАСТЬ ТЕСТА
+    (например, test_create_unique_user_success).
     
-    yield response, user_payload, access_token
+    Тест сам создаёт пользователя и передаёт токен в эту фикстуру.
+    Фикстура гарантирует очистку в teardown.
     
-    with allure.step("Teardown: Удаление пользователя после теста"):
-        UserHelpers.cleanup_user(api_client, access_token)
+    Yields: 
+        function: Функция для регистрации токена на очистку
+    """ 
+    tokens_to_cleanup = []
+    
+    def register_token(token):
+        """Регистрирует токен для последующей очистки."""
+        if token:
+            tokens_to_cleanup.append(token)
         
+    yield register_token
+    
+    # Teardown: очистка всех зарегистрированных токенов
+    for token in tokens_to_cleanup:
+        with allure.step("Teardown: Удаление пользователя по токену"):
+            UserHelpers.cleanup_user(api_client, token)
+                    

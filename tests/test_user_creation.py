@@ -13,10 +13,19 @@ class TestUserCreation:
     @allure.title("Успешное создание уникального пользователя")
     @allure.description("Проверка, что уникальный пользователь успешно создается с кодом 200")
     @allure.severity(allure.severity_level.CRITICAL)
-    def test_create_unique_user_success(self, registered_user_with_cleanup):
-        """Тест создания уникального пользователя."""
-        
-        response, user_payload, access_token = registered_user_with_cleanup
+    def test_create_unique_user_success(
+        self, api_client, data_generator, cleanup_user_token
+    ):
+        """
+        Тест создания уникального пользователя.
+        Регистрация выполняется в ТЕЛЕ теста
+        """
+        with allure.step("Подготовка данных для нового пользователя"):
+            user_payload = UserHelpers.prepare_user_payload(data_generator)
+        with allure.step("Отправка POST запроса на создание пользователя"):
+            response = api_client.create_user(user_payload)
+        access_token = response.json().get("accessToken")
+        cleanup_user_token(access_token)
         
         with allure.step("Проверка кода ответа 200"):
             assert response.status_code == StatusCode.OK
